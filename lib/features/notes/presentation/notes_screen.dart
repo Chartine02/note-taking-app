@@ -18,8 +18,12 @@ class NotesScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Your Notes'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
+          TextButton.icon(
+            icon: const Icon(Icons.logout, color: Colors.black),
+            label: const Text(
+              'Logout',
+              style: TextStyle(color: Colors.black),
+            ),
             onPressed: () async {
               await authProvider.signOut();
             },
@@ -53,6 +57,7 @@ class NotesScreen extends StatelessWidget {
                               onPressed: () async {
                                 final error =
                                     await notesProvider.deleteNote(note.id);
+                                if (!context.mounted) return;
                                 if (error != null) {
                                   showSnackBar(context, error, isError: true);
                                 } else {
@@ -65,9 +70,11 @@ class NotesScreen extends StatelessWidget {
                               onPressed: () async {
                                 final newText = await showNoteDialog(context,
                                     initialText: note.text);
+                                if (!context.mounted) return;
                                 if (newText != null && newText.isNotEmpty) {
                                   final error = await notesProvider.updateNote(
                                       note.id, newText);
+                                  if (!context.mounted) return;
                                   if (error != null) {
                                     showSnackBar(context, error, isError: true);
                                   } else {
@@ -85,8 +92,10 @@ class NotesScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final text = await showNoteDialog(context);
+          if (!context.mounted) return;
           if (text != null && text.isNotEmpty) {
             final error = await notesProvider.addNote(text);
+            if (!context.mounted) return;
             if (error != null) {
               showSnackBar(context, error, isError: true);
             } else {

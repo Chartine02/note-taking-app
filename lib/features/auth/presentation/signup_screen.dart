@@ -3,17 +3,30 @@ import 'package:provider/provider.dart';
 import '../domain/auth_provider.dart';
 import '../../../core/widgets/loader.dart';
 import '../../../core/utils/snackbar_utils.dart';
-import 'signup_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignupScreenState extends State<SignupScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+  String? emailError;
+  String? passwordError;
+  String? signupError;
+
+  void _resetInputs() {
+    emailController.clear();
+    passwordController.clear();
+    setState(() {
+      emailError = null;
+      passwordError = null;
+      signupError = null;
+    });
+  }
 
   bool _validateInputs() {
     final email = emailController.text.trim();
@@ -30,17 +43,22 @@ class _LoginScreenState extends State<LoginScreen> {
     if (password.isEmpty) {
       showSnackBar(context, 'Password is required', isError: true);
       return false;
+    } else if (password.length < 6) {
+      showSnackBar(context, 'Password must be at least 6 characters',
+          isError: true);
+      return false;
     }
+
     return true;
   }
 
   String _firebaseErrorToMessage(String error) {
-    if (error.contains('user-not-found')) {
-      return 'No user found for that email.';
-    } else if (error.contains('wrong-password')) {
-      return 'Incorrect password.';
+    if (error.contains('email-already-in-use')) {
+      return 'This email is already in use.';
     } else if (error.contains('invalid-email')) {
       return 'The email address is invalid.';
+    } else if (error.contains('weak-password')) {
+      return 'The password is too weak.';
     }
     return error;
   }
@@ -49,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(title: const Text('Sign Up')),
       body: auth.isLoading
           ? const Loader()
           : Padding(
@@ -59,19 +77,33 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   TextField(
                     controller: emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      errorText: emailError,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: passwordController,
-                    decoration: const InputDecoration(labelText: 'Password'),
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      errorText: passwordError,
+                    ),
                     obscureText: true,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
+                  if (signupError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        signupError!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
                   ElevatedButton(
                     onPressed: () async {
                       if (!_validateInputs()) return;
-                      final error = await auth.signIn(
+                      final error = await auth.signUp(
                         emailController.text.trim(),
                         passwordController.text.trim(),
                       );
@@ -80,21 +112,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         showSnackBar(context, _firebaseErrorToMessage(error),
                             isError: true);
                       } else {
-                        showSnackBar(context, "Login successful!");
+                        showSnackBar(
+                            context, "Signup successful! Please log in.");
+                        _resetInputs();
+                        await auth.signOut();
+                        await Future.delayed(const Duration(milliseconds: 500));
+                        if (mounted) Navigator.pop(context);
                       }
                     },
-                    child: const Text('Login'),
+                    child: const Text('Sign Up'),
                   ),
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const SignupScreen()),
-                      );
+                      Navigator.pop(context); // Go back to login
                     },
-                    child: const Text("Don't have an account? Sign up"),
+                    child: const Text('Already have an account? Log in'),
                   ),
                 ],
               ),
